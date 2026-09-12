@@ -1,6 +1,6 @@
 // Service Worker - AI英语 · 离线版 (100% offline, cache-first)
 // All assets and data are precached on install so the app runs with no network.
-const CACHE_NAME = 'eaw-offline-v1';
+const CACHE_NAME = 'eaw-offline-v2';
 
 const PRECACHE_ASSETS = [
   './',
@@ -10,6 +10,7 @@ const PRECACHE_ASSETS = [
   './js/db.js',
   './js/fsrs.js',
   './js/quiz.js',
+  './js/tts.js',
   './js/daily.js',
   './js/reading.js',
   './js/srs.js',
