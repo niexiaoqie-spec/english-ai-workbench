@@ -3,6 +3,7 @@
 // 练习记录保存在本机 IndexedDB。无任何网络请求。
 import { getData, showToast, escapeHtml, formatDate, emptyState, loadingInline } from './app.js';
 import { DB } from './db.js';
+import { tts } from './tts.js';
 
 let root = null;
 let dict = {};
@@ -188,10 +189,13 @@ function bindEvents() {
     const speedBtn = e.target.closest('.speed-btn');
     if (speedBtn) {
       currentSpeed = parseFloat(speedBtn.dataset.speed) || 1.0;
+      tts.setRate(currentSpeed);
       root.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
       speedBtn.classList.add('active');
-      // If currently speaking, restart with the new rate
-      if (speechAvailable() && window.speechSynthesis.speaking) {
+      // If currently playing, restart with the new rate
+      if (playSession && playSession.playing) {
+        playSession.stop();
+        playSession = null;
         handlePlay();
       }
       return;
@@ -365,63 +369,48 @@ function showPracticeView() {
   }
 }
 
-// --- Playback (speechSynthesis) ---
+// --- Playback (hardened tts session: chunked + watchdog) ---
+let playSession = null;
+
 function handlePlay() {
   if (!practiceData || !practiceData.text) {
     showToast('没有可播放的文本', 'warning');
     return;
   }
-  if (!speechAvailable()) {
+  if (!tts.available()) {
     showToast('您的浏览器不支持语音合成', 'error');
     return;
   }
 
-  // Resume if paused
-  if (window.speechSynthesis.paused) {
-    try {
-      window.speechSynthesis.resume();
-      updatePlayButtons(true);
-      return;
-    } catch (e) { /* fall through to restart */ }
+  if (playSession && playSession.paused) {
+    playSession.resume();
+    updatePlayButtons(true);
+    return;
   }
+  if (playSession && playSession.playing) return;
 
-  try {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(practiceData.text);
-    utterance.lang = 'en-US';
-    utterance.rate = currentSpeed;
-    utterance.pitch = 1;
-
-    const voices = window.speechSynthesis.getVoices();
-    const enVoice = voices.find(v => v.lang && v.lang.startsWith('en'));
-    if (enVoice) utterance.voice = enVoice;
-
-    utterance.onstart = () => updatePlayButtons(true);
-    utterance.onend = () => updatePlayButtons(false);
-    utterance.onerror = () => updatePlayButtons(false);
-
-    window.speechSynthesis.speak(utterance);
-  } catch (e) {
-    showToast('播放失败', 'error');
-    updatePlayButtons(false);
-  }
+  tts.setRate(currentSpeed);
+  playSession = tts.speak(practiceData.text, {
+    onStart: () => updatePlayButtons(true),
+    onEnd: () => { playSession = null; updatePlayButtons(false); },
+    onFail: () => { playSession = null; updatePlayButtons(false); showToast(tts.hint, 'warning'); },
+  });
+  updatePlayButtons(true);
 }
 
 function handlePause() {
-  if (!speechAvailable()) return;
-  try {
-    if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-      window.speechSynthesis.pause();
-      updatePlayButtons(false);
-    }
-  } catch (e) { /* ignore */ }
+  if (!tts.available() || !playSession) return;
+  playSession.pause();
+  updatePlayButtons(false);
 }
 
 function handleStop() {
-  if (!speechAvailable()) return;
-  try {
-    window.speechSynthesis.cancel();
-  } catch (e) { /* ignore */ }
+  if (playSession) {
+    playSession.stop();
+    playSession = null;
+  } else if (tts.available()) {
+    try { window.speechSynthesis.cancel(); } catch (e) { /* ignore */ }
+  }
   updatePlayButtons(false);
 }
 
