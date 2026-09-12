@@ -78,14 +78,14 @@ async def generate(req: GenerateRequest):
 
     try:
         result = await kimi.generate_daily_words(count=count, category=category)
-    except ValueError as e:
-        # Missing API key / configuration problem
-        raise HTTPException(status_code=502, detail=f"Kimi API configuration error: {e}")
     except json.JSONDecodeError as e:
         raise HTTPException(
             status_code=502,
             detail=f"Kimi returned invalid JSON. Please try again. ({e})",
         )
+    except ValueError as e:
+        # Missing API key / configuration problem
+        raise HTTPException(status_code=502, detail=f"Kimi API configuration error: {e}")
     except Exception as e:
         raise HTTPException(
             status_code=502,
