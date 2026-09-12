@@ -266,6 +266,16 @@ Rules:
 - All quiz options arrays must have exactly 4 items.
 - "answer" must be a valid 0-based index (0-3).
 - Quiz questions must reference words that appear in the "words" array.
+- CRITICAL: Never use the double-quote character (") inside any string value. For inner quotations use 「」 or 『』 instead. Every string must be on a single line with no unescaped quotes.
 - Respond ONLY with valid JSON. No markdown code fences, no explanations, no text outside the JSON object."""
 
-    return await chat_json(prompt)
+    try:
+        return await chat_json(prompt)
+    except json.JSONDecodeError:
+        # One retry with explicit repair instruction
+        repair = (
+            prompt
+            + "\n\nIMPORTANT: Your previous response was NOT valid JSON (likely unescaped double quotes inside string values). "
+            "Regenerate the response now as STRICTLY valid JSON, replacing all inner double quotes with 「」."
+        )
+        return await chat_json(repair)
