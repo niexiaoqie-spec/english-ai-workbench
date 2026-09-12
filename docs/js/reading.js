@@ -3,6 +3,7 @@
 // 阅读记录保存在本机 IndexedDB。无任何网络请求。
 import { getData, showToast, escapeHtml, formatDate, emptyState, loadingInline } from './app.js';
 import { DB } from './db.js';
+import { tts } from './tts.js';
 
 let root = null;
 let dict = {};
@@ -19,24 +20,13 @@ async function getTtsRate() {
   }
 }
 
-async function speakText(text) {
+function speakText(text) {
   if (!text) return;
-  if (!('speechSynthesis' in window)) {
+  if (!tts.available()) {
     showToast('您的浏览器不支持语音合成', 'warning');
     return;
   }
-  const rate = await getTtsRate();
-  try {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
-    u.rate = rate;
-    u.pitch = 1;
-    const voices = window.speechSynthesis.getVoices();
-    const enVoice = voices.find(v => v.lang && v.lang.startsWith('en'));
-    if (enVoice) u.voice = enVoice;
-    window.speechSynthesis.speak(u);
-  } catch (e) { /* speech unavailable */ }
+  tts.speak(text, { onFail: () => showToast(tts.hint, 'warning') });
 }
 
 function shuffle(arr) {
