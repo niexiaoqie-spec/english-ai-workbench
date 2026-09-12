@@ -3,6 +3,7 @@
 // 练习流程：对方句子（自动朗读）→ 你的句子（看中文提示跟读，自评"说出来了/没说出来"）。
 import { getData, showToast, escapeHtml, formatDate, emptyState, loadingInline } from './app.js';
 import { DB } from './db.js';
+import { tts } from './tts.js';
 
 const EMOJI_MAP = {
   daily_chat: '💬',
@@ -33,24 +34,13 @@ async function getTtsRate() {
   }
 }
 
-async function speakText(text) {
+function speakText(text) {
   if (!text) return;
-  if (!('speechSynthesis' in window)) {
+  if (!tts.available()) {
     showToast('您的浏览器不支持语音合成', 'warning');
     return;
   }
-  const rate = await getTtsRate();
-  try {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'en-US';
-    u.rate = rate;
-    u.pitch = 1;
-    const voices = window.speechSynthesis.getVoices();
-    const enVoice = voices.find(v => v.lang && v.lang.startsWith('en'));
-    if (enVoice) u.voice = enVoice;
-    window.speechSynthesis.speak(u);
-  } catch (e) { /* speech unavailable */ }
+  tts.speak(text, { onFail: () => showToast(tts.hint, 'warning') });
 }
 
 function stopSpeak() {
