@@ -3,6 +3,7 @@
 // All content is loaded once from precached local JSON (see initApp).
 
 import { DB } from './db.js';
+import { initTTS } from './tts.js';
 export { DB };
 
 // --- Toast Notification ---
@@ -200,6 +201,13 @@ async function initApp() {
     await DB.init();
   } catch (e) {
     console.warn('[offline] IndexedDB init failed:', e);
+  }
+
+  // 1b) TTS init: preload voices + unlock mobile audio on first gesture
+  try {
+    initTTS();
+  } catch (e) {
+    console.warn('[offline] TTS init failed:', e);
   }
 
   // 2) Preload all content ONCE into memory (files are precached by the SW)
