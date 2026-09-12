@@ -69,7 +69,15 @@ async def chat_json(prompt: str, system_prompt: str = "") -> dict:
             lines = lines[:-1]
         result = "\n".join(lines)
 
-    return json.loads(result)
+    try:
+        return json.loads(result)
+    except json.JSONDecodeError:
+        # Fallback: extract outermost JSON object from surrounding prose
+        start = result.find("{")
+        end = result.rfind("}")
+        if start != -1 and end > start:
+            return json.loads(result[start:end + 1])
+        raise
 
 
 async def analyze_text(text: str, level: str = "intermediate") -> dict:
