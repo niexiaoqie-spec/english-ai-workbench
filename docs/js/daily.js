@@ -4,6 +4,7 @@
 import { getData, showToast, escapeHtml, loadingInline } from './app.js';
 import { DB } from './db.js';
 import { makeQuiz, gradeQuiz } from './quiz.js';
+import { tts } from './tts.js';
 
 // --- Constants ---
 const EPOCH = '2026-09-13';
@@ -81,24 +82,13 @@ async function getTtsRate() {
   }
 }
 
-async function speakWord(text) {
+function speakWord(text) {
   if (!text) return;
-  if (!('speechSynthesis' in window)) {
+  if (!tts.available()) {
     showToast('您的浏览器不支持语音合成', 'warning');
     return;
   }
-  const rate = await getTtsRate();
-  try {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-    utterance.rate = rate;
-    utterance.pitch = 1;
-    const voices = window.speechSynthesis.getVoices();
-    const enVoice = voices.find(v => v.lang && v.lang.startsWith('en'));
-    if (enVoice) utterance.voice = enVoice;
-    window.speechSynthesis.speak(utterance);
-  } catch (e) { /* speech unavailable */ }
+  tts.speak(text, { onFail: () => showToast(tts.hint, 'warning') });
 }
 
 function defaultProgress(date) {
